@@ -141,8 +141,14 @@ namespace GpuTrayMonitor
         Process smiProc;
         volatile bool exiting;
 
-        static readonly Color BgGpu0 = Color.FromArgb(18, 52, 86);    // тёмно-синий
-        static readonly Color BgGpu1 = Color.FromArgb(26, 60, 40);    // тёмно-зелёный
+        // Фон значка различает карты; при большем числе GPU палитра идёт по кругу
+        static readonly Color[] GpuColors =
+        {
+            Color.FromArgb(18, 52, 86),   // GPU 0 — тёмно-синий
+            Color.FromArgb(26, 60, 40),   // GPU 1 — тёмно-зелёный
+            Color.FromArgb(70, 40, 80),   // GPU 2 — тёмно-фиолетовый
+            Color.FromArgb(80, 45, 25),   // GPU 3 — тёмно-коричневый
+        };
 
         readonly Metric[] metrics;
 
@@ -391,7 +397,7 @@ namespace GpuTrayMonitor
 
                 var old = icons[i].Icon;
                 icons[i].Icon = RenderIcon(metric.Value(s), metric.TextColor(s),
-                    g == 0 ? BgGpu0 : BgGpu1, metric.Strip);
+                    GpuColors[g % GpuColors.Length], metric.Strip);
                 if (old != null) old.Dispose();
 
                 string tip = s.Name + " · " + metric.RuName + ": " + TipValue(metric, s);
