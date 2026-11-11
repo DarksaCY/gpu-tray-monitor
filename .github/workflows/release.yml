@@ -1,0 +1,39 @@
+name: Release
+
+# Тег вида v1.2.3 → сборка GpuTrayMonitor.exe и публикация релиза с ним
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build
+        shell: pwsh
+        run: |
+          & "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /nologo /target:winexe /codepage:65001 `
+            /out:GpuTrayMonitor.exe /r:System.Windows.Forms.dll /r:System.Drawing.dll GpuTrayMonitor.cs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Release notes from CHANGELOG.md
+        shell: pwsh
+        run: |
+          $ver = $env:GITHUB_REF_NAME.TrimStart('v')
+          $text = Get-Content CHANGELOG.md -Raw -Encoding UTF8
+          $m = [regex]::Match($text, "(?ms)^## $([regex]::Escape($ver))\s*?\r?\n(.*?)(?=^## |\z)")
+          if (-not $m.Success) { throw "В CHANGELOG.md нет раздела '## $ver'" }
+          Set-Content notes.md $m.Groups[1].Value.Trim() -Encoding UTF8
+
+      - name: Publish
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ver = $env:GITHUB_REF_NAME.TrimStart('v')
+          gh release create $env:GITHUB_REF_NAME GpuTrayMonitor.exe --title "GPU Tray Monitor $ver" --notes-file notes.md
